@@ -57,10 +57,9 @@ html, body {
 ========================= */
 let lyrics = [];
 let index = 0;
-let visible = true;
 
 /* =========================
-   OBS INPUT LOCK
+   OBS KEY DEBOUNCE
 ========================= */
 let lastKeyTime = 0;
 const KEY_DELAY = 400;
@@ -73,19 +72,41 @@ function allowKey() {
 }
 
 /* =========================
-   DISPLAY LOGIC
+   ELEMENT
 ========================= */
 const lyricEl = document.getElementById("lyric");
 
-function showLyric() {
-  if (!lyrics.length) return;
+/* =========================
+   LOAD LYRICS
+========================= */
+fetch("song-lyrics.txt")
+  .then(res => {
+    if (!res.ok) throw new Error("Lyrics file not found");
+    return res.text();
+  })
+  .then(text => {
+    lyrics = text
+      .split("\n")
+      .map(l => l.trim())
+      .filter(l => l !== "")
+      .map(l => l === "—" ? "—" : l.replace("|", "<br>"));
 
-  if (lyrics[index] === "—") {
+    showLyric();
+  })
+  .catch(err => {
+    lyricEl.innerHTML = "Lyrics failed to load";
+    lyricEl.classList.add("show");
+  });
+
+/* =========================
+   DISPLAY
+========================= */
+function showLyric() {
+  if (!lyrics[index] || lyrics[index] === "—") {
     lyricEl.classList.remove("show");
     return;
   }
-
-  lyricEl.innerHTML = lyrics[index].replace(/\n/g, "<br>");
+  lyricEl.innerHTML = lyrics[index];
   lyricEl.classList.add("show");
 }
 
@@ -94,62 +115,29 @@ function hideLyric() {
 }
 
 /* =========================
-   LOAD LYRICS (TEXT FILE)
-========================= */
-fetch("lyrics.txt")
-  .then(res => res.text())
-  .then(text => {
-    lyrics = [];
-
-    text
-      .split("\n\n") // blocks
-      .forEach(block => {
-        if (block.trim() === "---") {
-          lyrics.push("—");
-        } else {
-          lyrics.push(block.trim());
-        }
-      });
-
-    showLyric();
-  })
-  .catch(() => {
-    lyricEl.innerHTML = "lyrics.txt not found";
-    lyricEl.classList.add("show");
-  });
-
-/* =========================
-   KEY CONTROLS
+   CONTROLS
 ========================= */
 document.addEventListener("keydown", (e) => {
   if (!allowKey()) return;
 
-  switch (e.key) {
-    case "ArrowRight":
-    case " ":
-      if (index < lyrics.length - 1) {
-        hideLyric();
-        setTimeout(() => {
-          index++;
-          showLyric();
-        }, 150);
-      }
-      break;
+  if (e.key === "ArrowRight" || e.key === " ") {
+    if (index < lyrics.length - 1) {
+      hideLyric();
+      setTimeout(() => {
+        index++;
+        showLyric();
+      }, 150);
+    }
+  }
 
-    case "ArrowLeft":
-      if (index > 0) {
-        hideLyric();
-        setTimeout(() => {
-          index--;
-          showLyric();
-        }, 150);
-      }
-      break;
-
-    case "0":
-      visible = !visible;
-      visible ? showLyric() : hideLyric();
-      break;
+  if (e.key === "ArrowLeft") {
+    if (index > 0) {
+      hideLyric();
+      setTimeout(() => {
+        index--;
+        showLyric();
+      }, 150);
+    }
   }
 });
 </script>
